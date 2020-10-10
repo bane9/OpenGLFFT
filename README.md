@@ -5,7 +5,7 @@
 Features
 --------
 
-- Foward and inverse fast furrier transform
+- Foward and inverse fast fourier transform
 - Can do FFT on an image of any resolution (depends on the configuration, restrictions listed below)
 - Can load/save images of .jpg and .png format
 - Will work with R, RG, RGB and RGBA images

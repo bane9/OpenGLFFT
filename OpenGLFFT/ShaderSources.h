@@ -9,6 +9,8 @@ R"delim(
 
 #define PI 3.14159265358979323846264338327950288
 
+#define COLOR_BUFFER_SIZE 32
+
 layout (local_size_x = WORKGROUP_SIZE_X, local_size_y = 1, local_size_z = 1) in;
 
 layout (binding = 0, rgba32f) uniform image2D inputImage;
@@ -30,6 +32,9 @@ layout(std430, binding = 3) buffer img_info {
 
 shared float real_cache[SHARED_BUFFER_SIZE];
 shared float imag_cache[SHARED_BUFFER_SIZE];
+
+vec4 color_buffer_real[COLOR_BUFFER_SIZE];
+vec4 color_buffer_imag[COLOR_BUFFER_SIZE];
 
 void sync()
 {
@@ -71,11 +76,10 @@ uint twiddle_map(uint threadId, uint currentIteration, uint logTwo, uint N)
 
 vec2 twiddle(float q, bool is_inverse, float N)
 {
-    float modifier = float(int(!is_inverse) * 2 - 1);
-	float theta = modifier * 2.0 * PI * q / N;
+	float theta = float(int(!is_inverse) * 2 - 1) * 2.0 * PI * q / N;
 
 	float r = cos(theta);
-	float i = sqrt(1.0 - r*r) * (float(theta < 0.0) * 2.0 - 1.0);
+	float i = sqrt(1.0 - r*r) * float(int(theta < 0.0) * 2 - 1);
 
 	return vec2(r, i);
 }
@@ -108,109 +112,98 @@ void fft_radix2(int logTwo, int btid, int g_offset, bool is_inverse, float N)
     }
 }
 
-void load_stage0(int btid, int g_offset, int scanline, int channel)
+void load_stage0(int btid, int g_offset, int scanline)
 {
 	for(int i = btid * 2; i < btid * 2 + g_offset * 2; i++)
     {
         int j = int(rev_bits(i) >> img.clz_width);
         
-		vec4 temp = imageLoad(inputImage, ivec2(j, scanline));
+		color_buffer_real[i - btid * 2] = imageLoad(inputImage, ivec2(j, scanline));
 
-		real_cache[i] = temp[channel];
-	
-		imag_cache[i] = 0.0;
+		color_buffer_imag[i - btid * 2] = vec4(0.0);
     }
 }
 
-void store_stage0(int btid, int g_offset, int scanline, int channel)
+void store_stage0(int btid, int g_offset, int scanline)
 {
 	for(int i = btid * 2; i < btid * 2 + g_offset * 2; i++)
     {   
 		ivec2 idx = ivec2(i, scanline);
 
-		vec4 temp_real = imageLoad(realPart, idx);
-	
-		vec4 temp_imag = imageLoad(imagPart, idx);
-
-		temp_real[channel] = real_cache[i];
-
-		temp_imag[channel] = imag_cache[i];
-
-		imageStore(realPart, idx, temp_real);
+		imageStore(realPart, idx, color_buffer_real[i - btid * 2]);
 		
-		imageStore(imagPart, idx, temp_imag);
+		imageStore(imagPart, idx, color_buffer_imag[i - btid * 2]);
     }
 }
 
-void load_stage1_2(int btid, int g_offset, int scanline, int channel)
+void load_stage1_2(int btid, int g_offset, int scanline)
 {
 	for(int i = btid * 2; i < btid * 2 + g_offset * 2; i++)
     {
         int j = int(rev_bits(i) >> img.clz_height);
 
-		vec4 temp = imageLoad(realPart, ivec2(scanline, j));
+		color_buffer_real[i - btid * 2] = imageLoad(realPart, ivec2(scanline, j));
 
-		real_cache[i] = temp[channel];
+		color_buffer_imag[i - btid * 2] = imageLoad(imagPart, ivec2(scanline, j));
 
-		temp = imageLoad(imagPart, ivec2(scanline, j));
-        
-		imag_cache[i] = temp[channel];
     }
 }
 
-void store_stage1_2(int btid, int g_offset, int scanline, int channel, int N)
+void store_stage1_2(int btid, int g_offset, int scanline, float N)
 {
 	for(int i = btid * 2; i < btid * 2 + g_offset * 2; i++)
     {        
 		ivec2 idx = ivec2(scanline, i);
 
-		vec4 temp_real = imageLoad(realPart, idx);
-	
-		vec4 temp_imag = imageLoad(imagPart, idx);
+		vec4 colr = color_buffer_real[i - btid * 2] * N;
+		vec4 coli = color_buffer_imag[i - btid * 2] * N;
 
-		temp_real[channel] = real_cache[i] / float(N);
-
-		temp_imag[channel] = imag_cache[i] / float(N);
-
-		imageStore(realPart, idx, temp_real);
-		
-		imageStore(imagPart, idx, temp_imag);
+		imageStore(realPart, idx, colr);
+		imageStore(imagPart, idx, coli);
 	
     }
 }
 
-
-void load_stage3(int btid, int g_offset, int scanline, int channel)
+void load_stage3(int btid, int g_offset, int scanline)
 {
 	for(int i = btid * 2; i < btid * 2 + g_offset * 2; i++)
     {
         int j = int(rev_bits(i) >> img.clz_width);
 
-		vec4 temp = imageLoad(realPart, ivec2(j, scanline));
+		color_buffer_real[i - btid * 2] = imageLoad(realPart, ivec2(j, scanline));
 
-		real_cache[i] = temp[channel];
-
-		temp = imageLoad(imagPart, ivec2(j, scanline));
-        
-		imag_cache[i] = temp[channel];
+		color_buffer_imag[i - btid * 2] = imageLoad(imagPart, ivec2(j, scanline));
     }
 }
 
-void store_stage3(int btid, int g_offset, int scanline, int channel, int N)
+void store_stage3(int btid, int g_offset, int scanline, float N)
 {
 	for(int i = btid * 2; i < btid * 2 + g_offset * 2; i++)
     {        
 		if(i >= img.input_width) return;
 
-		vec4 temp_real = imageLoad(realPart, ivec2(i, scanline));
-
-		temp_real[channel] = real_cache[i] / float(N);
-
-		if(channel == img.no_of_channels - 1)
-			imageStore(inputImage, ivec2(i, scanline), temp_real);
-		else
-			imageStore(realPart, ivec2(i, scanline), temp_real);
+		vec4 col = color_buffer_real[i - btid * 2] * N;
+			
+		imageStore(inputImage, ivec2(i, scanline), col);
     }
+}
+
+void load_into_cache(int btid, int g_offset, int channel)
+{
+	for(int i = btid * 2; i < btid * 2 + g_offset * 2; i++)
+    {
+		real_cache[i] = color_buffer_real[i - btid * 2][channel];
+		imag_cache[i] = color_buffer_imag[i - btid * 2][channel];
+	}
+}
+
+void load_from_cache(int btid, int g_offset, int channel)
+{
+	for(int i = btid * 2; i < btid * 2 + g_offset * 2; i++)
+    {
+		color_buffer_real[i - btid * 2][channel] = real_cache[i];
+		color_buffer_imag[i - btid * 2][channel] = imag_cache[i];
+	}
 }
 
 void main()
@@ -222,16 +215,24 @@ void main()
 			int N = img.output_width;
 			int g_offset = N / 2 / WORKGROUP_SIZE_X;
 			int btid = int(g_offset * gl_LocalInvocationID.x);
+			
+			load_stage0(btid, g_offset, int(gl_WorkGroupID.x));
+			sync();
+
 			for(int channel = 0; channel < img.no_of_channels; channel++)
 			{
-				load_stage0(btid, g_offset, int(gl_WorkGroupID.x), channel);
+				load_into_cache(btid, g_offset, channel);
 				sync();
+				
 				fft_radix2(img.logtwo_width, btid, g_offset, false, N);
 				sync();
-				store_stage0(btid, g_offset, int(gl_WorkGroupID.x), channel);
+
+				load_from_cache(btid, g_offset, channel);
 				sync();
 			}
 			
+			store_stage0(btid, g_offset, int(gl_WorkGroupID.x));
+
 			return;
 		}
 		case 1:
@@ -240,17 +241,25 @@ void main()
 			int N = img.output_height;
 			int g_offset = N / 2 / WORKGROUP_SIZE_X;
 			int btid = int(g_offset * gl_LocalInvocationID.x);
-			int divisor = (img.stage == 2) ? N : 1;
+			float divisor = (img.stage == 2) ? 1.0 / float(N) : 1.0;
 			bool is_inverse = img.stage == 2;
+			
+			load_stage1_2(btid, g_offset, int(gl_WorkGroupID.x));
+			sync();
+			
 			for(int channel = 0; channel < img.no_of_channels; channel++)
 			{
-				load_stage1_2(btid, g_offset, int(gl_WorkGroupID.x), channel);
+				load_into_cache(btid, g_offset, channel);
 				sync();
+
 				fft_radix2(img.logtwo_height, btid, g_offset, is_inverse, N);
 				sync();
-				store_stage1_2(btid, g_offset, int(gl_WorkGroupID.x), channel, divisor);
+				
+				load_from_cache(btid, g_offset, channel);
 				sync();
 			}
+
+			store_stage1_2(btid, g_offset, int(gl_WorkGroupID.x), divisor);
 
 			return;
 		}
@@ -259,15 +268,24 @@ void main()
 			int N = img.output_width;
 			int g_offset = N / 2 / WORKGROUP_SIZE_X;
 			int btid = int(g_offset * gl_LocalInvocationID.x);
+			float divisor = 1.0 / float(N);
+
+			load_stage3(btid, g_offset, int(gl_WorkGroupID.x));
+			sync();
+
 			for(int channel = 0; channel < img.no_of_channels; channel++)
 			{
-				load_stage3(btid, g_offset, int(gl_WorkGroupID.x), channel);
+				load_into_cache(btid, g_offset, channel);
 				sync();
+
 				fft_radix2(img.logtwo_width, btid, g_offset, true, N);
 				sync();
-				store_stage3(btid, g_offset, int(gl_WorkGroupID.x), channel, N);
+			
+				load_from_cache(btid, g_offset, channel);
 				sync();
 			}
+
+			store_stage3(btid, g_offset, int(gl_WorkGroupID.x), divisor);
 		}
 	}
 }

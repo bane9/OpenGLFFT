@@ -16,6 +16,7 @@ public:
 	ComputeShader(const char* src, bool isAPath = true)
 	{
 		const char* src_raw = src;
+		std::stringstream ss;
 
 		if (isAPath)
 		{
@@ -26,13 +27,17 @@ public:
 				throw std::runtime_error("Cannot open shader source file");
 			}
 
-			std::string computeShaderSrcCode((std::istreambuf_iterator<char>(programSource)),
-				std::istreambuf_iterator<char>());
-
-			src_raw = computeShaderSrcCode.c_str();
+			ss << programSource.rdbuf();
 		}
 
-		loadPorgram(src_raw);
+		if (!isAPath)
+		{
+			loadPorgram(src_raw);
+		}
+		else
+		{
+			loadPorgram(ss.str().c_str());
+		}
 	}
 
 	ComputeShader(const ComputeShader&) = delete;
@@ -96,7 +101,7 @@ private:
 		if (!ret)
 		{
 			int length;
-			glCheck(glGetShaderInfoLog(shader, 0, &length, nullptr));
+			glCheck(glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &length));
 
 			std::string errBuffer(length, '\0');
 
@@ -115,7 +120,7 @@ private:
 		if (!ret)
 		{
 			int length;
-			glCheck(glGetProgramInfoLog(program, 0, &length, nullptr));
+			glCheck(glGetProgramiv(program, GL_INFO_LOG_LENGTH, &length));
 
 			std::string errBuffer(length, '\0');
 

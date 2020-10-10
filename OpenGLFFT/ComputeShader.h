@@ -15,9 +15,6 @@ public:
 
 	ComputeShader(const char* src, bool isAPath = true)
 	{
-		const char* src_raw = src;
-		std::stringstream ss;
-
 		if (isAPath)
 		{
 			std::ifstream programSource(src);
@@ -27,16 +24,14 @@ public:
 				throw std::runtime_error("Cannot open shader source file");
 			}
 
-			ss << programSource.rdbuf();
-		}
+			std::string programSourceStr((std::istreambuf_iterator<char>(programSource)),
+				std::istreambuf_iterator<char>());
 
-		if (!isAPath)
-		{
-			loadPorgram(src_raw);
+			loadPorgram(programSourceStr.c_str());
 		}
 		else
 		{
-			loadPorgram(ss.str().c_str());
+			loadPorgram(src);
 		}
 	}
 

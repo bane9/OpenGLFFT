@@ -38,11 +38,41 @@ void initGL(int width, int height, const char* title = "", bool windowVisible = 
 
 void screenshot(int width, int height, const char* filename)
 {
+    constexpr int extension_offset = sizeof(".png") - 1;
+    
+    std::size_t filename_len = strlen(filename);
+
+    if (filename_len < extension_offset)
+    {
+        std::cout << "Invalid file extension in " << filename << ", only .png and .jpg are supported\n";
+        exit(EXIT_FAILURE);
+    }
+
     std::vector<uint8_t> data((std::size_t)width * height * 3);
 
     glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, data.data());
 
-    stbi_write_png(filename, width, height, 3, data.data(), 0);
+    if (strcmp(filename + (filename_len - extension_offset), ".png") == 0)
+    {
+        if (!stbi_write_png(filename, width, height, 3, data.data(), 0))
+        {
+            std::cout << "Failed to write " << filename << '\n';
+            exit(EXIT_FAILURE);
+        }
+    }
+    else if (strcmp(filename + (filename_len - extension_offset), ".jpg") == 0)
+    {
+        if (!stbi_write_jpg(filename, width, height, 3, data.data(), 100))
+        {
+            std::cout << "Failed to write " << filename << '\n';
+            exit(EXIT_FAILURE);
+        }
+    }
+    else
+    {
+        std::cout << "Invalid file extension in " << filename << ", only .png and .jpg are supported\n";
+        exit(EXIT_FAILURE);
+    }
 }
 
 int main(int argc, char *argv[])

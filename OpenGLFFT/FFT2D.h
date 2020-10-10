@@ -38,12 +38,14 @@ public:
 		fft2d.bindUniform("realPart", 1);
 		fft2d.bindUniform("imagPart", 2);
 		fft2d.bindUniform("img_info", 3);
+
+		originalImage.bind(0);
+		realPart.bind(1);
+		imaginaryPart.bind(2);
 	}
 
 	void foward()
 	{
-		bindImages();
-
 		{
 			fft2ddata.stage = 0;
 			SSBO tmp(fft2ddata, 3);
@@ -61,9 +63,6 @@ public:
 
 	void inverse()
 	{
-		originalImage.upload();
-		bindImages();
-
 		{
 			fft2ddata.stage = 2;
 			SSBO tmp(fft2ddata, 3);
@@ -107,18 +106,6 @@ public:
 	Image2D imaginaryPart;
 
 private:
-	void bindImages()
-	{
-
-		originalImage.unbind();
-		realPart.unbind();
-		imaginaryPart.unbind();
-
-		originalImage.bind(0);
-		realPart.bind(1);
-		imaginaryPart.bind(2);
-	}
-
 	ComputeShader fft2d;
 
 	struct FFT2Ddata

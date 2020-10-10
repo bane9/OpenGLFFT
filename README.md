@@ -11,7 +11,7 @@ Features
 - Will work with R, RG, RGB and RGBA images
 - Power spectrum generation
 - CLI interface
-- Runs on an optimized GPU Compute shaders
+- Runs on optimized GPU Compute shaders
 
 How to use
 ----------

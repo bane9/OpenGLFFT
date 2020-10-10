@@ -80,6 +80,10 @@ public:
 
 	Image2D generatePowerSpectrum()
 	{
+		originalImage.unbind();
+		realPart.unbind();
+		imaginaryPart.unbind();
+
 		realPart.bind(0);
 		imaginaryPart.bind(1);
 
@@ -97,6 +101,10 @@ public:
 		spectrumShader.invoke(realPart.get_width() / 2, realPart.get_height());
 
 		powerSpectrum.unbind();
+
+		originalImage.bind(0);
+		realPart.bind(1);
+		imaginaryPart.bind(2);
 
 		return powerSpectrum;
 	}

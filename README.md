@@ -36,3 +36,11 @@ All of the restrictions are tied to following configurations:
 - `COLOR_BUFFER_SIZE` local array that stores pixel data. This cannot be smaller than `N / 2 / WORKGROUP_SIZE_X`
 
 All of these defines are in [FFT2D.comp](https://github.com/bane9/OpenGLFFT/blob/main/OpenGLFFT/FFT2D.comp) (in this configuration the shader code is located [here](https://github.com/bane9/OpenGLFFT/blob/main/OpenGLFFT/ShaderSources.h#L7))
+
+Dependencies
+------------
+
+- [GLFW](https://www.glfw.org/)
+- [GLAD](https://glad.dav1d.de/) (included)
+- [stbi_image](https://github.com/nothings/stb/blob/master/stb_image.h) (included)
+- [stbi_image_write](https://github.com/nothings/stb/blob/master/stb_image_write.h) (included)

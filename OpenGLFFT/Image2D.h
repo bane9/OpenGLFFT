@@ -100,7 +100,7 @@ public:
 
     void bind(GLuint slot)
     {
-        glCheck(glBindImageTexture(slot, ImageID, 0, GL_FALSE, 0, GL_READ_WRITE, channelsToInternalFormat()));
+        glCheck(glBindImageTexture(slot, ImageID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F));
     }
 
     void unbind()
@@ -129,7 +129,7 @@ public:
         
         glCheck(glGenTextures(1, &ImageID));
         glCheck(glBindTexture(GL_TEXTURE_2D, ImageID));
-        glCheck(glTexImage2D(GL_TEXTURE_2D, 0, channelsToInternalFormat(),
+        glCheck(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F,
             width, height, 0, channelsToFormat(), GL_FLOAT, data.data()));
 
         glCheck(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
@@ -172,23 +172,6 @@ private:
             return GL_RG;
         case 1:
             return GL_RED;
-        default:
-            throw std::logic_error("Invalid channel count present in the image");
-        }
-    }
-
-    GLenum channelsToInternalFormat()
-    {
-        switch (channels)
-        {
-        case 4:
-            return GL_RGBA32F;
-        case 3:
-            return GL_RGB32F;
-        case 2:
-            return GL_RG32F;
-        case 1:
-            return GL_R32F;
         default:
             throw std::logic_error("Invalid channel count present in the image");
         }

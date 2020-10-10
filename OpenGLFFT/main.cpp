@@ -5,7 +5,7 @@
 
 GLFWwindow* window;
 
-void initGL(int width, int height, const char* title = "")
+void initGL(int width, int height, const char* title = "", bool windowVisible = false)
 {
     if (!glfwInit())
         exit(EXIT_FAILURE);
@@ -13,25 +13,33 @@ void initGL(int width, int height, const char* title = "")
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 
-    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+    if (!windowVisible)
+    {
+        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+    }
 
-    window = glfwCreateWindow(width, height, title, NULL, NULL);
+    window = glfwCreateWindow(width, height, title, nullptr, nullptr);
+
     if (!window)
     {
         glfwTerminate();
+        std::cout << "Failed to create glfw window\n";
         exit(EXIT_FAILURE);
     }
 
     glfwMakeContextCurrent(window);
-    gladLoadGL();
-    glfwSwapInterval(1);
+    
+    if (!gladLoadGL())
+    {
+        std::cout << "Failed to initalize OpenGL\n";
+        exit(EXIT_FAILURE);
+    }
 }
 
 void screenshot(int width, int height, const char* filename)
 {
     std::vector<uint8_t> data((std::size_t)width * height * 3);
 
-    glPixelStorei(GL_PACK_ALIGNMENT, 1);
     glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, data.data());
 
     stbi_write_png(filename, width, height, 3, data.data(), 0);
@@ -68,7 +76,7 @@ int main(int argc, char *argv[])
             }
             else
             {
-                std::cout << "Unrecognized option: " << argv[i];
+                std::cout << "Unrecognized option: " << argv[i] << '\n';
                 exit(EXIT_FAILURE);
             }
 
@@ -78,7 +86,7 @@ int main(int argc, char *argv[])
 
     if (!paths[0])
     {
-        std::cout << "No input image provided";
+        std::cout << "No input image provided\n";
         exit(EXIT_FAILURE);
     }
 
@@ -93,11 +101,6 @@ int main(int argc, char *argv[])
         if(paths[1])
         {
             auto power_spectrum = fft.generatePowerSpectrum();
-
-            if (power_spectrum.get_width() != power_spectrum.get_height())
-            {
-                std::cout << "Warning: fft intermediates are not 1:1 aspect ratio, result is expected to be incorrect\n";
-            }
 
             power_spectrum.bindAsFrameBuffer();
 
@@ -127,7 +130,7 @@ int main(int argc, char *argv[])
     }
     catch (const std::exception& except)
     {
-        std::cout << "Exception:\n" << except.what();
+        std::cout << "Exception:\n" << except.what() << '\n';
         exit(EXIT_FAILURE);
     }
 

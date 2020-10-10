@@ -9,7 +9,7 @@ R"delim(
 
 #define PI 3.14159265358979323846264338327950288
 
-layout (local_size_x = WORKGROUP_SIZE_X, local_size_y = 1, local_size_y = 1) in;
+layout (local_size_x = WORKGROUP_SIZE_X, local_size_y = 1, local_size_z = 1) in;
 
 layout (binding = 0, rgba32f) uniform image2D inputImage;
 layout (binding = 1, rgba32f) uniform image2D realPart;
@@ -277,7 +277,7 @@ constexpr const char* PowerSpectrumSource =
 R"delim(
 #version 430 core
 
-layout (local_size_x = 1, local_size_y = 1, local_size_y = 1) in;
+layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
 layout (binding = 0, rgba32f) uniform readonly image2D realPart;
 layout (binding = 1, rgba32f) uniform readonly image2D imagPart;
@@ -288,12 +288,9 @@ layout (binding = 2, rgba32f) uniform writeonly image2D spectrum;
 void main()
 {
 	ivec2 idx1 = ivec2(gl_GlobalInvocationID.xy);
+	
 	ivec2 idx2 = ivec2(gl_NumWorkGroups.x, gl_NumWorkGroups.y / 2) + idx1;
-
-	if(idx1.y > gl_NumWorkGroups.y / 2 - 1)
-	{
-		idx2 = ivec2(mod(idx2.x, gl_NumWorkGroups.x * 2), mod(idx2.y, gl_NumWorkGroups.y));
-	}
+	idx2 = ivec2(mod(idx2.x, gl_NumWorkGroups.x * 2), mod(idx2.y, gl_NumWorkGroups.y));
 	
 	vec4 r1 = imageLoad(realPart, idx1);
 	vec4 i1 = imageLoad(imagPart, idx1);
@@ -301,10 +298,10 @@ void main()
 	vec4 r2 = imageLoad(realPart, idx2);
 	vec4 i2 = imageLoad(imagPart, idx2);
 
-	const float scale = 5.0;
+	const float scale = 0.2;
 	
-	vec4 col1 = log10(r1 * r1 + i1 * i1) / scale;
-	vec4 col2 = log10(r2 * r2 + i2 * i2) / scale;
+	vec4 col1 = log10(r1 * r1 + i1 * i1) * scale;
+	vec4 col2 = log10(r2 * r2 + i2 * i2) * scale;
 
 	imageStore(spectrum, idx1, col2);
 	imageStore(spectrum, idx2, col1);

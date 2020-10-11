@@ -97,7 +97,6 @@ public:
 		spectrumShader.bindUniform("imagPart", 1);
 
 		spectrumShader.bindUniform("spectrum", 2);
-		SSBO tmp(fft2ddata, 3);
 		spectrumShader.invoke(realPart.get_width() / 2, realPart.get_height());
 
 		powerSpectrum.unbind();

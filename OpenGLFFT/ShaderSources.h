@@ -9,7 +9,7 @@ R"delim(
 
 #define PI 3.14159265358979323846264338327950288
 
-#define COLOR_BUFFER_SIZE 32
+#define PIXEL_BUFFER_SIZE 32
 
 layout (local_size_x = WORKGROUP_SIZE_X, local_size_y = 1, local_size_z = 1) in;
 
@@ -33,8 +33,8 @@ layout(std430, binding = 3) buffer img_info {
 shared float real_cache[SHARED_BUFFER_SIZE];
 shared float imag_cache[SHARED_BUFFER_SIZE];
 
-vec4 color_buffer_real[COLOR_BUFFER_SIZE];
-vec4 color_buffer_imag[COLOR_BUFFER_SIZE];
+vec4 pixel_buffer_real[PIXEL_BUFFER_SIZE];
+vec4 pixel_buffer_imag[PIXEL_BUFFER_SIZE];
 
 void sync()
 {
@@ -118,9 +118,9 @@ void load_stage0(int btid, int g_offset, int scanline)
     {
         int j = int(rev_bits(i) >> img.clz_width);
         
-		color_buffer_real[i - btid * 2] = imageLoad(inputImage, ivec2(j, scanline));
+		pixel_buffer_real[i - btid * 2] = imageLoad(inputImage, ivec2(j, scanline));
 
-		color_buffer_imag[i - btid * 2] = vec4(0.0);
+		pixel_buffer_imag[i - btid * 2] = vec4(0.0);
     }
 }
 
@@ -130,9 +130,9 @@ void store_stage0(int btid, int g_offset, int scanline)
     {   
 		ivec2 idx = ivec2(i, scanline);
 
-		imageStore(realPart, idx, color_buffer_real[i - btid * 2]);
+		imageStore(realPart, idx, pixel_buffer_real[i - btid * 2]);
 		
-		imageStore(imagPart, idx, color_buffer_imag[i - btid * 2]);
+		imageStore(imagPart, idx, pixel_buffer_imag[i - btid * 2]);
     }
 }
 
@@ -142,9 +142,9 @@ void load_stage1_2(int btid, int g_offset, int scanline)
     {
         int j = int(rev_bits(i) >> img.clz_height);
 
-		color_buffer_real[i - btid * 2] = imageLoad(realPart, ivec2(scanline, j));
+		pixel_buffer_real[i - btid * 2] = imageLoad(realPart, ivec2(scanline, j));
 
-		color_buffer_imag[i - btid * 2] = imageLoad(imagPart, ivec2(scanline, j));
+		pixel_buffer_imag[i - btid * 2] = imageLoad(imagPart, ivec2(scanline, j));
 
     }
 }
@@ -155,8 +155,8 @@ void store_stage1_2(int btid, int g_offset, int scanline, float N)
     {        
 		ivec2 idx = ivec2(scanline, i);
 
-		vec4 colr = color_buffer_real[i - btid * 2] * N;
-		vec4 coli = color_buffer_imag[i - btid * 2] * N;
+		vec4 colr = pixel_buffer_real[i - btid * 2] * N;
+		vec4 coli = pixel_buffer_imag[i - btid * 2] * N;
 
 		imageStore(realPart, idx, colr);
 		imageStore(imagPart, idx, coli);
@@ -170,9 +170,9 @@ void load_stage3(int btid, int g_offset, int scanline)
     {
         int j = int(rev_bits(i) >> img.clz_width);
 
-		color_buffer_real[i - btid * 2] = imageLoad(realPart, ivec2(j, scanline));
+		pixel_buffer_real[i - btid * 2] = imageLoad(realPart, ivec2(j, scanline));
 
-		color_buffer_imag[i - btid * 2] = imageLoad(imagPart, ivec2(j, scanline));
+		pixel_buffer_imag[i - btid * 2] = imageLoad(imagPart, ivec2(j, scanline));
     }
 }
 
@@ -182,7 +182,7 @@ void store_stage3(int btid, int g_offset, int scanline, float N)
     {        
 		if(i >= img.input_width) return;
 
-		vec4 col = color_buffer_real[i - btid * 2] * N;
+		vec4 col = pixel_buffer_real[i - btid * 2] * N;
 			
 		imageStore(inputImage, ivec2(i, scanline), col);
     }
@@ -192,8 +192,8 @@ void load_into_cache(int btid, int g_offset, int channel)
 {
 	for(int i = btid * 2; i < btid * 2 + g_offset * 2; i++)
     {
-		real_cache[i] = color_buffer_real[i - btid * 2][channel];
-		imag_cache[i] = color_buffer_imag[i - btid * 2][channel];
+		real_cache[i] = pixel_buffer_real[i - btid * 2][channel];
+		imag_cache[i] = pixel_buffer_imag[i - btid * 2][channel];
 	}
 }
 
@@ -201,8 +201,8 @@ void load_from_cache(int btid, int g_offset, int channel)
 {
 	for(int i = btid * 2; i < btid * 2 + g_offset * 2; i++)
     {
-		color_buffer_real[i - btid * 2][channel] = real_cache[i];
-		color_buffer_imag[i - btid * 2][channel] = imag_cache[i];
+		pixel_buffer_real[i - btid * 2][channel] = real_cache[i];
+		pixel_buffer_imag[i - btid * 2][channel] = imag_cache[i];
 	}
 }
 
@@ -228,7 +228,6 @@ void main()
 				sync();
 
 				load_from_cache(btid, g_offset, channel);
-				sync();
 			}
 			
 			store_stage0(btid, g_offset, int(gl_WorkGroupID.x));
@@ -256,7 +255,6 @@ void main()
 				sync();
 				
 				load_from_cache(btid, g_offset, channel);
-				sync();
 			}
 
 			store_stage1_2(btid, g_offset, int(gl_WorkGroupID.x), divisor);
@@ -282,7 +280,6 @@ void main()
 				sync();
 			
 				load_from_cache(btid, g_offset, channel);
-				sync();
 			}
 
 			store_stage3(btid, g_offset, int(gl_WorkGroupID.x), divisor);

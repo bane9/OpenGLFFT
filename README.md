@@ -33,7 +33,7 @@ All of the restrictions are tied to following configurations:
 
 - `WORKGROUP_SIZE_X` this must be power of two and not bigger than `N / 2` (where in this case `N` would be `max(roundUpToPoT(width), roundUpToPoT(height))`)
 - `SHARED_BUFFER_SIZE` size of the shared buffer's. This affects the maximum resoultion of an image you can do FFT on
-- `COLOR_BUFFER_SIZE` local array that stores pixel data. This cannot be smaller than `N / 2 / WORKGROUP_SIZE_X`
+- `PIXEL_BUFFER_SIZE` local array that stores pixel data. This cannot be smaller than `N / 2 / WORKGROUP_SIZE_X`
 
 All of these defines are in [FFT2D.comp](https://github.com/bane9/OpenGLFFT/blob/main/OpenGLFFT/FFT2D.comp) (in this configuration the shader code is located [here](https://github.com/bane9/OpenGLFFT/blob/main/OpenGLFFT/ShaderSources.h#L7))
 

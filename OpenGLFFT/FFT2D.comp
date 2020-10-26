@@ -228,6 +228,8 @@ void main()
 			
 			store_stage0(btid, g_offset, int(gl_WorkGroupID.x));
 
+			sync();
+
 			return;
 		}
 		case 1:
@@ -253,6 +255,8 @@ void main()
 				load_from_cache(btid, g_offset, channel);
 			}
 
+			sync();
+
 			store_stage1_2(btid, g_offset, int(gl_WorkGroupID.x), divisor);
 
 			return;
@@ -277,6 +281,8 @@ void main()
 			
 				load_from_cache(btid, g_offset, channel);
 			}
+
+			sync();
 
 			store_stage3(btid, g_offset, int(gl_WorkGroupID.x), divisor);
 		}
